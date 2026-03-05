@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0c0f">
+<title>VP Scanner Pro — v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c0f;--surface:#111318;--surface2:#181c23;--border:#1e2530;
+  --accent:#00d4ff;--green:#00e676;--red:#ff3d57;--yellow:#f0a500;--purple:#bf5fff;
+  --text:#e8edf5;--muted:#5a6478;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.05) 2px,rgba(0,0,0,.05) 4px);pointer-events:none;z-index:0}
+
+/* ── MAIN NAV TABS ── */
+.main-nav{position:sticky;top:0;z-index:200;background:var(--surface);border-bottom:2px solid var(--border);display:flex}
+.main-tab{flex:1;padding:14px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;border:none;background:none}
+.main-tab.vp{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,212,255,.05)}
+.main-tab.cs{color:var(--purple);border-bottom-color:var(--purple);background:rgba(191,95,255,.05)}
+.main-tab:not(.vp):not(.cs){color:var(--muted)}
+
+/* ── VIEWS ── */
+.view{display:none}.view.active{display:block}
+
+/* ── VP SCANNER STYLES (original v2) ── */
+.container{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:20px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.logo-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:3px;color:var(--accent);text-shadow:0 0 30px rgba(0,212,255,.4)}
+.logo-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.session-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 14px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:var(--surface);color:var(--muted)}
+.session-badge.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.08)}
+.api-banner{background:var(--surface);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.api-banner-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+.api-input{flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px 12px;color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;transition:all .2s}
+.api-input:focus{border-color:var(--accent)}
+.api-btn{background:var(--accent);color:var(--bg);border:none;padding:8px 16px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;text-transform:uppercase;white-space:nowrap}
+.api-status{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 12px;border-radius:4px;white-space:nowrap}
+.api-status.ok{background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.2)}
+.api-status.err{background:rgba(255,61,87,.1);color:var(--red);border:1px solid rgba(255,61,87,.2)}
+.api-status.wait{background:rgba(90,100,120,.15);color:var(--muted);border:1px solid var(--border)}
+.date-bar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 16px;margin-bottom:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;flex-wrap:wrap;gap:10px}
+.date-bar-left{color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.date-bar-left span{color:var(--text)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;display:inline-block;margin-right:5px}
+.fetch-status{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.fetch-status.fetching{color:var(--yellow)}.fetch-status.success{color:var(--green)}.fetch-status.error{color:var(--red)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.scan-btn{background:var(--accent);color:var(--bg);border:none;padding:8px 20px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:all .2s}
+.countdown{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+.countdown span{color:var(--accent)}
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden}
+.summary-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.summary-card.total::before{background:var(--accent)}.summary-card.strong::before{background:var(--green)}
+.summary-card.bearish::before{background:var(--red)}.summary-card.stacks::before{background:var(--yellow)}
+.summary-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.summary-value{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;letter-spacing:2px}
+.summary-card.total .summary-value{color:var(--accent)}.summary-card.strong .summary-value{color:var(--green)}
+.summary-card.bearish .summary-value{color:var(--red)}.summary-card.stacks .summary-value{color:var(--yellow)}
+.scanner-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:18px;margin-bottom:24px}
+.instrument-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:all .3s}
+.instrument-card:hover{border-color:rgba(0,212,255,.3);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.instrument-card.score-high{border-left:3px solid var(--green)}.instrument-card.score-mid{border-left:3px solid var(--yellow)}.instrument-card.score-low{border-left:3px solid var(--red)}
+.instrument-card.poc-stack-glow{box-shadow:inset 0 0 20px rgba(240,165,0,.05);border-color:rgba(240,165,0,.3)!important}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.instrument-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px}
+.instrument-full{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+.stack-badge{background:rgba(240,165,0,.15);border:1px solid rgba(240,165,0,.3);color:var(--yellow);font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 8px;border-radius:3px;letter-spacing:1px;text-transform:uppercase;margin-left:8px}
+.score-badge{display:flex;flex-direction:column;align-items:center}
+.score-ring{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:20px;border:2px solid}
+.score-ring.high{border-color:var(--green);color:var(--green);background:rgba(0,230,118,.08)}
+.score-ring.mid{border-color:var(--yellow);color:var(--yellow);background:rgba(240,165,0,.08)}
+.score-ring.low{border-color:var(--red);color:var(--red);background:rgba(255,61,87,.08)}
+.score-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:3px;text-transform:uppercase}
+.bias-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:5px}
+.bias-tag.bearish{background:rgba(255,61,87,.12);color:var(--red);border:1px solid rgba(255,61,87,.2)}
+.bias-tag.bullish{background:rgba(0,230,118,.12);color:var(--green);border:1px solid rgba(0,230,118,.2)}
+.bias-tag.neutral{background:rgba(90,100,120,.15);color:var(--muted);border:1px solid var(--border)}
+.price-strip{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:rgba(0,212,255,.04);border-bottom:1px solid var(--border)}
+.live-price{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--text);transition:color .3s}
+.live-price.up{color:var(--green)}.live-price.down{color:var(--red)}
+.price-change{font-family:'IBM Plex Mono',monospace;font-size:11px}
+.price-change.up{color:var(--green)}.price-change.down{color:var(--red)}
+.price-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.last-updated{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)}
+.price-source{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px}
+.price-source.live{background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.2)}
+.price-source.manual{background:rgba(90,100,120,.15);color:var(--muted);border:1px solid var(--border)}
+.distance-section{padding:10px 18px;border-bottom:1px solid var(--border)}
+.dist-row{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+.dist-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);width:80px;flex-shrink:0;letter-spacing:1px;text-transform:uppercase}
+.dist-bar-wrap{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.dist-bar-fill{height:100%;border-radius:3px;transition:width .5s;min-width:2px}
+.dist-val{font-family:'IBM Plex Mono',monospace;font-size:10px;width:55px;text-align:right;flex-shrink:0}
+.score-bar-container{padding:9px 18px;border-bottom:1px solid var(--border)}
+.score-bar-label{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase}
+.score-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:2px;transition:width .5s}
+.levels-section{padding:12px 18px}
+.levels-title{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.level-input-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:7px}
+.level-input-group{display:flex;flex-direction:column;gap:3px}
+.level-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.level-input{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 9px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;width:100%;transition:all .2s;outline:none;-webkit-appearance:none}
+.level-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,212,255,.1)}
+.level-input.poc{border-color:rgba(0,212,255,.3);color:var(--accent)}
+.level-input.mowo{border-color:rgba(255,61,87,.3);color:var(--red)}
+.level-input.asian{border-color:rgba(240,165,0,.3);color:var(--yellow)}
+.checks-section{padding:0 18px 10px;display:flex;flex-direction:column;gap:4px}
+.check-row{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--bg);border-radius:4px;border:1px solid var(--border)}
+.check-label{font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.check-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.check-result{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.5px}
+.check-result.pass{color:var(--green)}.check-result.fail{color:var(--red)}.check-result.neutral{color:var(--muted)}.check-result.stack{color:var(--yellow)}
+.setup-box{margin:0 18px 12px;padding:12px 14px;border-radius:6px;border-left:3px solid}
+.setup-box.short{background:rgba(255,61,87,.06);border-color:var(--red)}
+.setup-box.long{background:rgba(0,230,118,.06);border-color:var(--green)}
+.setup-box.wait{background:rgba(90,100,120,.1);border-color:var(--muted)}
+.setup-type{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px}
+.setup-box.short .setup-type{color:var(--red)}.setup-box.long .setup-type{color:var(--green)}.setup-box.wait .setup-type{color:var(--muted)}
+.setup-detail{font-size:12px;color:var(--text);line-height:1.6}
+.setup-levels{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
+.setup-level-item{display:flex;flex-direction:column;gap:2px}
+.setup-level-name{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.setup-level-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--text)}
+.update-btn{width:calc(100% - 36px);margin:0 18px 12px;padding:8px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.update-btn:hover{background:rgba(0,212,255,.08);border-color:var(--accent)}
+.rank-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
+.rank-header{padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--accent)}
+.rank-table{width:100%;border-collapse:collapse}
+.rank-table th{padding:9px 18px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--surface2)}
+.rank-table td{padding:10px 18px;font-family:'IBM Plex Mono',monospace;font-size:12px;border-bottom:1px solid var(--border);transition:background .2s}
+.rank-table tr:hover td{background:rgba(0,212,255,.03)}.rank-table tr:last-child td{border-bottom:none}
+.rank-num{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--muted)}
+.rank-num.g{color:#FFD700}.rank-num.s{color:#C0C0C0}.rank-num.b{color:#CD7F32}
+.footer{text-align:center;padding:16px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;border-top:1px solid var(--border);margin-top:6px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.instrument-card{animation:fadeIn .4s ease both}
+.instrument-card:nth-child(1){animation-delay:.05s}.instrument-card:nth-child(2){animation-delay:.1s}
+.instrument-card:nth-child(3){animation-delay:.15s}.instrument-card:nth-child(4){animation-delay:.2s}
+.instrument-card:nth-child(5){animation-delay:.25s}
+@keyframes priceFlash{0%{opacity:.3}100%{opacity:1}}
+.price-flash{animation:priceFlash .4s ease}
+
+/* ── CONSOLIDATION SCANNER STYLES ── */
+.cs-wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0}
+.cs-hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px 10px}
+.cs-hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cs-logo{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:4px;color:var(--purple);text-shadow:0 0 20px rgba(191,95,255,.4)}
+.cs-logo-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:1px}
+.cs-hdr-right{display:flex;align-items:center;gap:8px}
+.sdot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:all .3s}
+.sdot.on{background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.5s infinite}
+.sdot.off{background:var(--muted)}
+.cs-master{font-family:'Share Tech Mono',monospace;font-size:11px;padding:8px 16px;border-radius:4px;border:1px solid;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s}
+.cs-master.start{background:rgba(0,255,136,.08);border-color:var(--green);color:var(--green)}
+.cs-master.stop{background:rgba(255,61,87,.08);border-color:var(--red);color:var(--red)}
+.inst-filter{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.inst-filter::-webkit-scrollbar{display:none}
+.ipill{font-family:'Share Tech Mono',monospace;font-size:9px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
+.ipill.on{border-color:var(--purple);color:var(--purple);background:rgba(191,95,255,.08)}
+.tf-tabs{display:flex;background:var(--surface2);border-bottom:1px solid var(--border)}
+.tf-tab{flex:1;padding:8px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;border:none;background:none}
+.tf-tab.on5{color:var(--yellow);border-bottom-color:var(--yellow);background:rgba(255,204,0,.04)}
+.tf-tab.on15{color:var(--purple);border-bottom-color:var(--purple);background:rgba(191,95,255,.04)}
+.tf-tab.onBOTH{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,212,255,.04)}
+.tf-countdowns{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+.tfc{background:var(--surface2);padding:8px 14px}
+.tfc-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;display:flex;justify-content:space-between}
+.tfc-timer{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1;margin-bottom:4px}
+.tfc-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.tfc-fill{height:100%;border-radius:2px;transition:width 1s linear}
+.tfc5 .tfc-timer{color:var(--yellow)}.tfc5 .tfc-fill{background:linear-gradient(90deg,var(--yellow),#ff8c00)}
+.tfc15 .tfc-timer{color:var(--purple)}.tfc15 .tfc-fill{background:linear-gradient(90deg,var(--purple),var(--accent))}
+.cs-statsbar{display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface2);border-bottom:1px solid var(--border)}
+.csi{padding:8px 4px;text-align:center;border-right:1px solid var(--border)}
+.csi:last-child{border-right:none}
+.csi-lbl{font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+.csi-val{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1}
+.lev-panel{background:var(--surface);border-bottom:1px solid var(--border)}
+.lev-tog{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;border:none;background:none;width:100%;color:var(--text)}
+.lev-tog-lbl{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.lev-arr{font-size:12px;color:var(--muted);transition:transform .2s}
+.lev-arr.open{transform:rotate(180deg)}
+.lev-body2{display:none;padding:0 14px 12px}
+.lev-body2.open{display:block}
+.inst-block{background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.inst-bhdr{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border)}
+.inst-bname{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px;color:var(--accent)}
+.lev-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 10px}
+.lg{display:flex;flex-direction:column;gap:2px}
+.ll{font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.li{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;width:100%;outline:none;-webkit-appearance:none;transition:border-color .2s}
+.li:focus{border-color:var(--accent)}.li.vah{border-color:rgba(0,255,136,.3);color:var(--green)}
+.li.val{border-color:rgba(255,204,0,.3);color:var(--yellow)}.li.poc2{border-color:rgba(0,212,255,.3);color:var(--accent)}
+.li.mow2{border-color:rgba(255,61,87,.3);color:var(--red)}.li.mp{border-color:rgba(191,95,255,.3);color:var(--purple)}
+.test-bar{display:flex;gap:6px;padding:7px 14px;background:var(--surface2);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.test-bar::-webkit-scrollbar{display:none}
+.tb-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;padding:5px 0;flex-shrink:0;align-self:center}
+.tb{font-family:'Share Tech Mono',monospace;font-size:9px;padding:5px 10px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;white-space:nowrap;letter-spacing:.5px;transition:all .2s;flex-shrink:0}
+.tb:hover{border-color:var(--purple);color:var(--purple)}
+.feed-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border)}
+.feed-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px}
+.feed-right{display:flex;gap:8px;align-items:center}
+.feed-count{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);background:var(--surface2);padding:4px 10px;border-radius:20px;border:1px solid var(--border)}
+.clr-btn{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);background:none;border:1px solid var(--border);padding:4px 10px;border-radius:4px;cursor:pointer;letter-spacing:1px;text-transform:uppercase}
+.cs-feed{padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:300px;padding-bottom:30px}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;text-align:center;gap:10px}
+.empty-icon{font-size:44px;opacity:.25}
+.empty-txt{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;line-height:2;text-transform:uppercase}
+.acard{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;animation:csIn .35s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes csIn{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.acard.cons{border-left:3px solid var(--purple)}.acard.hi{box-shadow:0 0 25px rgba(191,95,255,.2)}
+.ctop{display:flex;align-items:flex-start;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.2)}
+.cleft{display:flex;align-items:center;gap:10px}
+.cinst{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;line-height:1}
+.ctype{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.ctime{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);margin-top:3px}
+.cbadges{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.badge{font-family:'Share Tech Mono',monospace;font-size:8px;padding:3px 7px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.b-tf5{background:rgba(255,204,0,.12);color:var(--yellow);border:1px solid rgba(255,204,0,.3)}
+.b-tf15{background:rgba(191,95,255,.12);color:var(--purple);border:1px solid rgba(191,95,255,.3)}
+.b-inside{background:rgba(255,204,0,.1);color:var(--yellow);border:1px solid rgba(255,204,0,.25)}
+.b-outside{background:rgba(255,61,87,.1);color:var(--red);border:1px solid rgba(255,61,87,.25)}
+.b-hi{background:rgba(191,95,255,.15);color:var(--purple);border:1px solid rgba(191,95,255,.3)}
+.b-std{background:rgba(30,40,55,.5);color:var(--muted);border:1px solid var(--border)}
+.zone-viz{padding:10px 14px;border-bottom:1px solid var(--border);border-top:1px solid var(--border)}
+.zone-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.zone-chart{position:relative;height:60px;background:var(--bg);border-radius:6px;border:1px solid var(--border);overflow:hidden}
+.zc-vah{position:absolute;left:0;right:0;height:1px;background:rgba(0,255,136,.6)}
+.zc-val{position:absolute;left:0;right:0;height:1px;background:rgba(255,204,0,.6)}
+.zc-poc{position:absolute;left:0;right:0;height:1px;background:rgba(0,212,255,.5);border-top:1px dashed rgba(0,212,255,.4)}
+.zc-cons{position:absolute;left:10%;right:10%;border-radius:2px;opacity:.35}
+.zc-price{position:absolute;right:8px;width:2px;border-radius:1px}
+.zc-price-lbl{position:absolute;right:14px;font-family:'Share Tech Mono',monospace;font-size:7px;transform:translateY(-50%)}
+.zc-lbl-vah{position:absolute;left:4px;font-family:'Share Tech Mono',monospace;font-size:7px;color:rgba(0,255,136,.7);transform:translateY(-50%)}
+.zc-lbl-val{position:absolute;left:4px;font-family:'Share Tech Mono',monospace;font-size:7px;color:rgba(255,204,0,.7);transform:translateY(-50%)}
+.zc-lbl-poc2{position:absolute;left:4px;font-family:'Share Tech Mono',monospace;font-size:7px;color:rgba(0,212,255,.6);transform:translateY(-50%)}
+.cs-metrics{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)}
+.met{padding:8px 6px;text-align:center;border-right:1px solid var(--border)}
+.met:last-child{border-right:none}
+.met-lbl{font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.met-val{font-family:'Bebas Neue',sans-serif;font-size:17px;line-height:1}
+.candle-strip{display:flex;align-items:flex-end;gap:3px;padding:7px 14px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;background:rgba(0,0,0,.15)}
+.candle-strip::-webkit-scrollbar{display:none}
+.cs-lbl2{font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--muted);letter-spacing:1px;margin-right:4px;align-self:center;flex-shrink:0;text-transform:uppercase}
+.mini-c{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.mc-wick{width:1px;background:currentColor;border-radius:1px}
+.mc-body{width:8px;border-radius:1px;min-height:2px}
+.mc-body.bull{background:rgba(0,255,136,.5);border:1px solid var(--green)}.mc-body.bear{background:rgba(255,61,87,.5);border:1px solid var(--red)}
+.mc-body.cons-hi{outline:1px solid rgba(191,95,255,.6)}
+.cs-action{padding:8px 14px;background:rgba(0,0,0,.2);font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);line-height:1.7;border-top:1px solid var(--border)}
+.sflash{position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:0}
+@keyframes sfl{0%{opacity:1}100%{opacity:0}}
+.sflash.active{animation:sfl .7s ease forwards}.sflash.pu{background:rgba(191,95,255,.12)}
+
+@media(max-width:900px){.scanner-grid{grid-template-columns:1fr}.summary-row{grid-template-columns:repeat(2,1fr)}.level-input-row{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.summary-row{grid-template-columns:1fr 1fr}.logo-title{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="sflash" id="sflash"></div>
+
+<!-- MAIN NAV -->
+<div class="main-nav">
+  <button class="main-tab vp" id="tabVP" onclick="showTab('vp')">📊 VP Scanner</button>
+  <button class="main-tab" id="tabCS" onclick="showTab('cs')">🔲 Consolidation</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- VP SCANNER VIEW                                               -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="view active" id="viewVP">
+<div class="container">
+  <div class="header">
+    <div>
+      <div class="logo-title">VP SCANNER <span style="font-size:14px;color:var(--purple);letter-spacing:2px">+ CONS</span></div>
+      <div class="logo-sub">Volume Profile Strategy · Live Prices + Manual VP Levels · v3</div>
+    </div>
+    <div class="header-right">
+      <span class="session-badge" id="londonBtn" onclick="setSession('london')">London</span>
+      <span class="session-badge active" id="nyBtn" onclick="setSession('ny')">New York</span>
+      <span class="session-badge" id="overlapBtn" onclick="setSession('overlap')">Overlap</span>
+    </div>
+  </div>
+  <div class="api-banner">
+    <span class="api-banner-label">Finnhub API Key</span>
+    <input class="api-input" id="apiKeyInput" type="text" placeholder="Paste your free Finnhub API key here..."/>
+    <button class="api-btn" onclick="saveApiKey()">Connect</button>
+    <a style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);text-decoration:none;opacity:.7" href="https://finnhub.io/register" target="_blank">↗ Get Free Key</a>
+    <span class="api-status wait" id="apiStatus">⬤ Not Connected</span>
+  </div>
+  <div class="date-bar">
+    <div class="date-bar-left">
+      <span id="currentDate"></span><span id="currentTime"></span>
+      <span>Session: <span id="sessionLabel" style="color:var(--accent)">New York</span></span>
+      <span><span class="live-dot"></span><span style="color:var(--green)">Market Open</span></span>
+      <span class="fetch-status" id="fetchStatus">Prices: Manual</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="countdown">Next fetch: <span id="countdown">—</span></span>
+      <button class="scan-btn" onclick="runScan()">▶ Run Scan</button>
+    </div>
+  </div>
+  <div class="summary-row">
+    <div class="summary-card total"><div class="summary-label">Instruments</div><div class="summary-value" id="totalCount">5</div></div>
+    <div class="summary-card strong"><div class="summary-label">Strong Setups</div><div class="summary-value" id="strongCount">0</div></div>
+    <div class="summary-card bearish"><div class="summary-label">Bearish Bias</div><div class="summary-value" id="bearishCount">0</div></div>
+    <div class="summary-card stacks"><div class="summary-label">POC Stacks</div><div class="summary-value" id="stackCount">0</div></div>
+  </div>
+  <div class="scanner-grid" id="scannerGrid"></div>
+  <div class="rank-section">
+    <div class="rank-header">📊 Setup Rankings — Best Trade First</div>
+    <table class="rank-table">
+      <thead><tr><th>Rank</th><th>Instrument</th><th>Live Price</th><th>Score</th><th>Bias</th><th>POC Stack</th><th>Setup</th><th>Priority</th></tr></thead>
+      <tbody id="rankBody"></tbody>
+    </table>
+  </div>
+  <div class="footer">VP SCANNER v3 · Consolidation Scanner Integrated · FreeForexAPI · $1,000 Account · 1% Risk · Max 2 Trades Per Session</div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- CONSOLIDATION SCANNER VIEW                                    -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="view" id="viewCS">
+<div class="cs-wrap">
+  <div class="cs-hdr">
+    <div class="cs-hdr-row">
+      <div>
+        <div class="cs-logo">CONSOLIDATION SCANNER</div>
+        <div class="cs-logo-sub">5M · 15M · Range Compression + Value Area Detection</div>
+      </div>
+      <div class="cs-hdr-right">
+        <div class="sdot off" id="sdot"></div>
+        <button class="cs-master start" id="csMasterBtn" onclick="toggleCS()">START</button>
+      </div>
+    </div>
+    <div class="inst-filter">
+      <div class="ipill on" onclick="toggleInst(this,'ALL')" data-inst="ALL">ALL</div>
+      <div class="ipill on" onclick="toggleInst(this,'GER40')" data-inst="GER40">GER40</div>
+      <div class="ipill on" onclick="toggleInst(this,'US30')" data-inst="US30">US30</div>
+      <div class="ipill on" onclick="toggleInst(this,'NAS100')" data-inst="NAS100">NAS100</div>
+      <div class="ipill on" onclick="toggleInst(this,'GBPUSD')" data-inst="GBPUSD">GBPUSD</div>
+      <div class="ipill on" onclick="toggleInst(this,'EURUSD')" data-inst="EURUSD">EURUSD</div>
+    </div>
+  </div>
+  <div class="tf-tabs">
+    <div class="tf-tab on5" id="tab5" onclick="setTF('5M')">5M Candles</div>
+    <div class="tf-tab" id="tab15" onclick="setTF('15M')">15M Candles</div>
+    <div class="tf-tab" id="tabBOTH" onclick="setTF('BOTH')">Both TFs</div>
+  </div>
+  <div class="tf-countdowns">
+    <div class="tfc tfc5">
+      <div class="tfc-lbl"><span>5M Close</span><span id="scan5lbl">Scans: 0</span></div>
+      <div class="tfc-timer" id="cd5">05:00</div>
+      <div class="tfc-bar"><div class="tfc-fill" id="fill5" style="width:100%"></div></div>
+    </div>
+    <div class="tfc tfc15">
+      <div class="tfc-lbl"><span>15M Close</span><span id="scan15lbl">Scans: 0</span></div>
+      <div class="tfc-timer" id="cd15">15:00</div>
+      <div class="tfc-bar"><div class="tfc-fill" id="fill15" style="width:100%"></div></div>
+    </div>
+  </div>
+  <div class="cs-statsbar">
+    <div class="csi"><div class="csi-lbl">Total</div><div class="csi-val" style="color:var(--purple)" id="csTot">0</div></div>
+    <div class="csi"><div class="csi-lbl">Active</div><div class="csi-val" style="color:var(--accent)" id="csAct">0</div></div>
+    <div class="csi"><div class="csi-lbl">5M</div><div class="csi-val" style="color:var(--yellow)" id="cs5">0</div></div>
+    <div class="csi"><div class="csi-lbl">15M</div><div class="csi-val" style="color:var(--purple)" id="cs15">0</div></div>
+    <div class="csi"><div class="csi-lbl">At Level</div><div class="csi-val" style="color:var(--green)" id="csLv">0</div></div>
+  </div>
+  <div class="lev-panel">
+    <button class="lev-tog" onclick="toggleCSLevels()">
+      <span class="lev-tog-lbl">📍 VP Levels — Shared with VP Scanner</span>
+      <span class="lev-arr" id="csLevArr">▼</span>
+    </button>
+    <div class="lev-body2" id="csLevBody"><div id="csLevInputs"></div></div>
+  </div>
+  <div class="test-bar">
+    <span class="tb-lbl">TEST:</span>
+    <button class="tb" onclick="testCons('GER40','5M','INSIDE')">GER40 5M Inside VA</button>
+    <button class="tb" onclick="testCons('US30','15M','INSIDE')">US30 15M Inside VA</button>
+    <button class="tb" onclick="testCons('GBPUSD','5M','OUTSIDE')">GBP 5M Range</button>
+    <button class="tb" onclick="testCons('EURUSD','15M','OUTSIDE')">EUR 15M Range</button>
+    <button class="tb" onclick="testCons('NAS100','BOTH','INSIDE')">NAS 5M+15M</button>
+  </div>
+  <div class="feed-hdr">
+    <div class="feed-title">Consolidation Feed</div>
+    <div class="feed-right">
+      <div class="feed-count" id="csFeedCount">0 alerts</div>
+      <button class="clr-btn" onclick="clearCSFeed()">Clear</button>
+    </div>
+  </div>
+  <div class="cs-feed" id="csFeed">
+    <div class="empty" id="csEmptyState">
+      <div class="empty-icon">🔲</div>
+      <div class="empty-txt">Scanner ready<br>Press START to detect consolidation<br>5M and 15M timeframes monitored</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ════════════════════════════════════════════════════════════════
+function showTab(t){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(b=>{b.classList.remove('vp','cs');});
+  if(t==='vp'){
+    document.getElementById('viewVP').classList.add('active');
+    document.getElementById('tabVP').classList.add('vp');
+  } else {
+    document.getElementById('viewCS').classList.add('active');
+    document.getElementById('tabCS').classList.add('cs');
+  }
+  window.scrollTo(0,0);
+}
+
+// ════════════════════════════════════════════════════════════════
+// VP SCANNER — ALL ORIGINAL v2 CODE
+// ════════════════════════════════════════════════════════════════
+const INSTRUMENTS=[
+  {id:'ger40', name:'GER40', full:'Germany 40 · DAX',         tier:1,finnhub:'OANDA:DE30_EUR/USD',wsSymbol:'OANDA:DE30_EUR'},
+  {id:'us30',  name:'US30',  full:'Dow Jones Industrial',      tier:1,finnhub:'OANDA:US30_USD',    wsSymbol:'OANDA:US30_USD'},
+  {id:'us100', name:'US100', full:'Nasdaq 100',                tier:2,finnhub:'OANDA:NAS100_USD',  wsSymbol:'OANDA:NAS100_USD'},
+  {id:'gbpusd',name:'GBPUSD',full:'British Pound / US Dollar', tier:2,finnhub:'OANDA:GBP_USD',     wsSymbol:'OANDA:GBP_USD'},
+  {id:'eurusd',name:'EURUSD',full:'Euro / US Dollar',          tier:2,finnhub:'OANDA:EUR_USD',     wsSymbol:'OANDA:EUR_USD'},
+];
+const DEFAULTS={
+  ger40:{poc:25255,asian:25300,mowo:24971,vah:25350,val:24650},
+  us30: {poc:48869,asian:48873,mowo:48523,vah:49450,val:48407},
+  us100:{poc:24958,asian:24976,mowo:24683,vah:25111,val:24400},
+  gbpusd:{poc:1.3493,asian:1.3493,mowo:1.3413,vah:1.3550,val:1.3200},
+  eurusd:{poc:1.1804,asian:1.1788,mowo:1.1771,vah:1.1900,val:1.1600},
+};
+let saved=JSON.parse(localStorage.getItem('vpScanner_v3')||'null');
+let state=saved||Object.fromEntries(INSTRUMENTS.map(i=>[i.id,{...DEFAULTS[i.id]}]));
+let livePrices=JSON.parse(localStorage.getItem('vpLivePrices')||'{}');
+let prevPrices={};
+let apiKey=localStorage.getItem('vpApiKey')||'';
+let session='ny';
+let fetchInterval=null;
+let countdown=30;
+let ws=null,wsConnected=false;
+
+window.onload=()=>{
+  if(apiKey){document.getElementById('apiKeyInput').value=apiKey;connectLivePrices();}
+  render();updateClock();setInterval(updateClock,1000);
+  renderCSLevels();startCSCountdown();
+};
+
+function saveApiKey(){apiKey=document.getElementById('apiKeyInput').value.trim();if(!apiKey)return;localStorage.setItem('vpApiKey',apiKey);connectLivePrices();}
+function connectLivePrices(){
+  setApiStatus('wait','⬤ Connecting...');
+  try{
+    if(ws)ws.close();
+    ws=new WebSocket(`wss://ws.finnhub.io?token=${apiKey}`);
+    ws.onopen=()=>{wsConnected=true;setApiStatus('ok','⬤ Live Connected');document.getElementById('fetchStatus').textContent='Prices: Live WebSocket';document.getElementById('fetchStatus').className='fetch-status success';INSTRUMENTS.forEach(i=>ws.send(JSON.stringify({type:'subscribe',symbol:i.wsSymbol})));startRestFallback();};
+    ws.onmessage=(e)=>{try{const d=JSON.parse(e.data);if(d.type==='trade'&&d.data){d.data.forEach(t=>{const i=INSTRUMENTS.find(x=>x.wsSymbol===t.s);if(i&&t.p)updateLivePrice(i.id,t.p);});}}catch(e){}};
+    ws.onerror=()=>{wsConnected=false;fetchAllPricesREST();startRestFallback();};
+    ws.onclose=()=>{wsConnected=false;setApiStatus('err','⬤ Disconnected');setTimeout(()=>{if(apiKey)connectLivePrices();},5000);};
+  }catch(e){fetchAllPricesREST();startRestFallback();}
+}
+function startRestFallback(){if(fetchInterval)clearInterval(fetchInterval);countdown=30;fetchInterval=setInterval(()=>{countdown--;document.getElementById('countdown').textContent=countdown+'s';if(countdown<=0){fetchAllPricesREST();countdown=30;}},1000);fetchAllPricesREST();}
+async function fetchAllPricesREST(){
+  if(!apiKey)return;
+  const sEl=document.getElementById('fetchStatus');sEl.textContent='Prices: Fetching...';sEl.className='fetch-status fetching';
+  let ok=0;
+  for(const i of INSTRUMENTS){try{const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${i.finnhub}&token=${apiKey}`);const d=await r.json();if(d&&d.c&&d.c>0){updateLivePrice(i.id,d.c);ok++;}}catch(e){}await new Promise(r=>setTimeout(r,200));}
+  if(ok>0){setApiStatus('ok','⬤ Live (REST)');sEl.textContent=`Prices: Live · ${new Date().toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;sEl.className='fetch-status success';localStorage.setItem('vpLivePrices',JSON.stringify(livePrices));}
+  else{setApiStatus('err','⬤ Failed');sEl.textContent='Prices: Failed — check key';sEl.className='fetch-status error';}
+}
+function updateLivePrice(id,price){prevPrices[id]=livePrices[id];livePrices[id]={price:parseFloat(price),time:Date.now()};updatePriceStrip(id);updateSummary();}
+function updatePriceStrip(id){
+  const el=document.getElementById('price-'+id);const chEl=document.getElementById('change-'+id);const upEl=document.getElementById('updated-'+id);const srEl=document.getElementById('src-'+id);const diEl=document.getElementById('dist-'+id);
+  if(!el)return;
+  const lp=livePrices[id];if(!lp)return;
+  const p=lp.price,pr=prevPrices[id],up=pr?p>=pr.price:true;
+  el.textContent=fmt(p);el.className=`live-price ${up?'up':'down'} price-flash`;setTimeout(()=>{if(el)el.className=`live-price ${up?'up':'down'}`;},400);
+  if(chEl&&pr){const d=p-pr.price,pct=((d/pr.price)*100).toFixed(4);chEl.textContent=`${d>=0?'+':''}${fmt(d)} (${d>=0?'+':''}${pct}%)`;chEl.className=`price-change ${d>=0?'up':'down'}`;}
+  if(upEl)upEl.textContent='Updated: '+new Date(lp.time).toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(srEl){srEl.textContent=wsConnected?'⬤ WS LIVE':'⬤ REST';srEl.className='price-source live';}
+  const a=analyze(id);if(diEl&&a)diEl.innerHTML=buildDistanceBars(p,a.po,a.mo,a.distPOCPct,a.distMOWOPct);
+}
+function buildDistanceBars(p,poc,mowo,dPOC,dMOWO){
+  const pW=Math.max(3,Math.min(100,100-dPOC*15)),mW=Math.max(3,Math.min(100,100-dMOWO*15));
+  const pC=dPOC<0.3?'var(--yellow)':dPOC<1?'var(--accent)':'var(--muted)';
+  const mC=dMOWO<0.3?'var(--yellow)':dMOWO<1?'var(--red)':'var(--muted)';
+  return`<div class="dist-row"><span class="dist-label">To POC</span><div class="dist-bar-wrap"><div class="dist-bar-fill" style="width:${pW}%;background:${pC}"></div></div><span class="dist-val" style="color:${pC}">${dPOC.toFixed(2)}%</span></div>
+<div class="dist-row"><span class="dist-label">To MO/WO</span><div class="dist-bar-wrap"><div class="dist-bar-fill" style="width:${mW}%;background:${mC}"></div></div><span class="dist-val" style="color:${mC}">${dMOWO.toFixed(2)}%</span></div>`;
+}
+function setApiStatus(t,txt){const el=document.getElementById('apiStatus');el.className=`api-status ${t}`;el.textContent=txt;}
+function getPrice(id){const lp=livePrices[id];if(lp&&(Date.now()-lp.time)<600000)return lp.price;return 0;}
+function analyze(id){
+  const d=state[id];const p=getPrice(id);if(!p)return null;
+  const po=parseFloat(d.poc),as=parseFloat(d.asian),mo=parseFloat(d.mowo),vh=parseFloat(d.vah),vl=parseFloat(d.val);
+  if(!po)return null;
+  const abovePOC=p>po,aboveMOWO=mo?p>mo:null,aboveAsian=as?p>as:null,aboveVAH=vh?p>vh:false,belowVAL=vl?p<vl:false;
+  const pocDiff=as?Math.abs(po-as)/po:1,pocStack=pocDiff<0.002;
+  let bs=0;abovePOC?bs++:bs--;if(aboveMOWO!==null)aboveMOWO?bs++:bs--;if(aboveAsian!==null)aboveAsian?bs++:bs--;
+  const bias=bs>=2?'bullish':bs<=-2?'bearish':'neutral';
+  let score=0;
+  if(Math.abs(p-po)/po>0.003)score+=2;if(aboveMOWO===abovePOC)score+=2;else score+=1;if(pocStack)score+=2;if(aboveVAH||belowVAL)score+=2;
+  const dPOC=Math.abs(p-po)/po;if(dPOC<0.005)score+=2;else if(dPOC<0.015)score+=1;score=Math.min(10,score);
+  let setup='WAIT',setupClass='wait',setupDetail='No clear setup. Wait for price to reach a key level.',entryLevel=null,slLevel=null,tp1Level=null,tp2Level=null;
+  if(bias==='bearish'&&!abovePOC&&aboveMOWO===false){setup='SHORT';setupClass='short';entryLevel=Math.min(po,mo||po);slLevel=Math.max(po,mo||po)*1.005;tp1Level=vl||p*.99;tp2Level=(vl||p*.99)*.99;setupDetail=`Bearish. Retest of ${fmt(entryLevel)} = SHORT.`;}
+  else if(bias==='bullish'&&abovePOC&&aboveMOWO===true){setup='LONG';setupClass='long';entryLevel=Math.max(po,mo||po);slLevel=Math.min(po,mo||po)*.995;tp1Level=vh||p*1.01;tp2Level=(vh||p*1.01)*1.01;setupDetail=`Bullish. Pullback to ${fmt(entryLevel)} = LONG.`;}
+  else if(belowVAL&&mo&&!aboveMOWO){setup='SHORT';setupClass='short';entryLevel=mo;slLevel=mo*1.008;tp1Level=vl*.99;tp2Level=vl*.98;setupDetail=`Below VAL+MO/WO. Retest ${fmt(mo)} = SHORT.`;}
+  else if(aboveVAH&&mo&&aboveMOWO){setup='LONG';setupClass='long';entryLevel=vh;slLevel=vh*.992;tp1Level=vh*1.01;tp2Level=vh*1.02;setupDetail=`Above VAH+MO/WO. Pullback to ${fmt(vh)} = LONG.`;}
+  else{setupDetail='Mixed signals. No trade — wait for clarity.';}
+  let rrr=null;if(entryLevel&&slLevel&&tp2Level){const r=Math.abs(entryLevel-slLevel),rw=Math.abs(tp2Level-entryLevel);if(r>0)rrr=(rw/r).toFixed(1);}
+  const distPOCPct=po?Math.abs(p-po)/po*100:0,distMOWOPct=mo?Math.abs(p-mo)/mo*100:0;
+  return{p,po,as,mo,vh,vl,abovePOC,aboveMOWO,aboveAsian,aboveVAH,belowVAL,pocStack,bias,score,setup,setupClass,setupDetail,entryLevel,slLevel,tp1Level,tp2Level,rrr,distPOCPct,distMOWOPct};
+}
+function fmt(v){if(!v&&v!==0)return'—';const n=parseFloat(v);if(n>=10000)return n.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});if(n>=100)return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});return n.toFixed(5).replace(/0+$/,'').replace(/\.$/,'');}
+function scClass(s){return s>=7?'high':s>=4?'mid':'low';}
+function scCardClass(s){return s>=7?'score-high':s>=4?'score-mid':'score-low';}
+function renderCard(inst){
+  const d=state[inst.id];const a=analyze(inst.id);const lp=livePrices[inst.id];const prev=prevPrices[inst.id];const hasLive=!!lp;const p=lp?lp.price:0;const isUp=prev?p>=prev.price:true;const sc=a?scClass(a.score):'low';const score=a?a.score:0;const pocStack=a?a.pocStack:false;const bias=a?a.bias:'neutral';const setupClass=a?a.setupClass:'wait';const setup=a?a.setup:'WAIT';
+  return`<div class="instrument-card ${scCardClass(score)} ${pocStack?'poc-stack-glow':''}" id="card-${inst.id}">
+  <div class="card-header"><div><div class="instrument-name">${inst.name}<span style="font-size:11px;color:${inst.tier===1?'var(--accent)':'var(--muted)'};font-family:'IBM Plex Mono',monospace;margin-left:8px">T${inst.tier}</span>${pocStack?'<span class="stack-badge">⚡ POC STACK</span>':''}</div><div class="instrument-full">${inst.full}</div><div class="bias-tag ${bias}">${bias==='bearish'?'▼':bias==='bullish'?'▲':'◆'} ${bias.toUpperCase()} BIAS</div></div><div class="score-badge"><div class="score-ring ${sc}">${score}/10</div><div class="score-label">Score</div></div></div>
+  <div class="price-strip"><div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Live Price</div><div id="price-${inst.id}" class="live-price ${hasLive?(isUp?'up':'down'):''}">${hasLive?fmt(p):'Enter below ↓'}</div><div id="change-${inst.id}" class="price-change ${isUp?'up':'down'}">${hasLive&&prev?'':'Waiting...'}</div></div><div class="price-meta"><div id="updated-${inst.id}" class="last-updated">${hasLive?'Updated: '+new Date(lp.time).toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'Not yet fetched'}</div><div id="src-${inst.id}" class="price-source ${hasLive?'live':'manual'}">${hasLive?(wsConnected?'⬤ WS LIVE':'⬤ REST'):'⬤ MANUAL'}</div></div></div>
+  <div class="distance-section" id="dist-${inst.id}">${a?buildDistanceBars(p,a.po,a.mo,a.distPOCPct,a.distMOWOPct):'<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted)">Enter levels to see distances</div>'}</div>
+  <div class="score-bar-container"><div class="score-bar-label"><span>Setup Quality</span><span style="color:${sc==='high'?'var(--green)':sc==='mid'?'var(--yellow)':'var(--red)'}">${sc==='high'?'STRONG':sc==='mid'?'MODERATE':'WEAK'}</span></div><div class="score-bar"><div class="score-bar-fill" style="width:${score*10}%;background:${sc==='high'?'var(--green)':sc==='mid'?'var(--yellow)':'var(--red)'}"></div></div></div>
+  <div class="levels-section"><div class="levels-title">📍 VP Levels — Input Each Morning</div>
+    <div class="level-input-row">
+      <div class="level-input-group"><span class="level-label" style="color:var(--accent)">Fixed Range POC</span><input class="level-input poc" type="number" step="any" value="${d.poc||''}" onchange="updateLevel('${inst.id}','poc',this.value)" placeholder="POC"></div>
+      <div class="level-input-group"><span class="level-label" style="color:var(--yellow)">Asian Session POC</span><input class="level-input asian" type="number" step="any" value="${d.asian||''}" onchange="updateLevel('${inst.id}','asian',this.value)" placeholder="Asian POC"></div>
+      <div class="level-input-group"><span class="level-label" style="color:var(--red)">MO / WO</span><input class="level-input mowo" type="number" step="any" value="${d.mowo||''}" onchange="updateLevel('${inst.id}','mowo',this.value)" placeholder="MO/WO"></div>
+    </div>
+    <div class="level-input-row">
+      <div class="level-input-group"><span class="level-label">VAH</span><input class="level-input" type="number" step="any" value="${d.vah||''}" onchange="updateLevel('${inst.id}','vah',this.value)" placeholder="VAH"></div>
+      <div class="level-input-group"><span class="level-label">VAL</span><input class="level-input" type="number" step="any" value="${d.val||''}" onchange="updateLevel('${inst.id}','val',this.value)" placeholder="VAL"></div>
+      <div class="level-input-group"><span class="level-label" style="color:var(--muted)">Session POC</span><input class="level-input" type="number" step="any" value="${d.sessionPoc||''}" onchange="updateLevel('${inst.id}','sessionPoc',this.value)" placeholder="Session POC"></div>
+    </div>
+  </div>
+  <div class="checks-section">
+    <div class="check-row"><span class="check-label"><span class="check-dot" style="background:var(--accent)"></span>Price vs Fixed Range POC</span><span class="check-result ${a?(a.abovePOC?'pass':'fail'):'neutral'}">${a?(a.abovePOC?'▲ ABOVE':'▼ BELOW'):'— NO DATA'}</span></div>
+    <div class="check-row"><span class="check-label"><span class="check-dot" style="background:var(--red)"></span>Price vs MO / WO</span><span class="check-result ${a&&a.aboveMOWO!==null?(a.aboveMOWO?'pass':'fail'):'neutral'}">${a&&a.aboveMOWO!==null?(a.aboveMOWO?'▲ ABOVE':'▼ BELOW'):'— NO DATA'}</span></div>
+    <div class="check-row"><span class="check-label"><span class="check-dot" style="background:var(--yellow)"></span>POC Stack Confluence</span><span class="check-result ${pocStack?'stack':'neutral'}">${pocStack?'⚡ CONFIRMED':'— NONE'}</span></div>
+    <div class="check-row"><span class="check-label"><span class="check-dot" style="background:var(--muted)"></span>Value Area Position</span><span class="check-result ${a&&(a.aboveVAH||a.belowVAL)?'pass':'neutral'}">${a?(a.aboveVAH?'▲ ABOVE VAH':a.belowVAL?'▼ BELOW VAL':'◆ INSIDE VA'):'— NO DATA'}</span></div>
+  </div>
+  <div class="setup-box ${setupClass}"><div class="setup-type">${setup==='SHORT'?'▼ SHORT SETUP':setup==='LONG'?'▲ LONG SETUP':'◆ NO TRADE'}</div><div class="setup-detail">${a?a.setupDetail:'Enter levels to see setup.'}</div>${a&&a.entryLevel?`<div class="setup-levels"><div class="setup-level-item"><span class="setup-level-name">Entry</span><span class="setup-level-val">${fmt(a.entryLevel)}</span></div><div class="setup-level-item"><span class="setup-level-name">Stop Loss</span><span class="setup-level-val" style="color:var(--red)">${fmt(a.slLevel)}</span></div><div class="setup-level-item"><span class="setup-level-name">TP1</span><span class="setup-level-val" style="color:var(--green)">${fmt(a.tp1Level)}</span></div><div class="setup-level-item"><span class="setup-level-name">TP2</span><span class="setup-level-val" style="color:var(--green)">${fmt(a.tp2Level)}</span></div>${a.rrr?`<div class="setup-level-item"><span class="setup-level-name">RRR</span><span class="setup-level-val" style="color:${parseFloat(a.rrr)>=3?'var(--green)':'var(--red)'}">1:${a.rrr}</span></div>`:''}</div>`:''}
+  </div>
+  <button class="update-btn" onclick="refreshCard('${inst.id}')">↻ Recalculate</button>
+</div>`;
+}
+function renderRankRow(inst,rank){const a=analyze(inst.id);const lp=livePrices[inst.id];if(!a)return'';const sc=scClass(a.score);const rC=rank===1?'g':rank===2?'s':rank===3?'b':'';const pri=a.score>=7?'🔥 TRADE NOW':a.score>=4?'👀 MONITOR':'⏳ WAIT';return`<tr><td><span class="rank-num ${rC}">${rank}</span></td><td style="font-weight:600;color:var(--text)">${inst.name} <span style="color:var(--muted);font-size:10px">T${inst.tier}</span></td><td style="color:${lp?'var(--green)':'var(--muted)'}">${lp?fmt(lp.price):'—'}</td><td><span style="color:${sc==='high'?'var(--green)':sc==='mid'?'var(--yellow)':'var(--red)'};font-weight:600">${a.score}/10</span></td><td><span class="bias-tag ${a.bias}" style="font-size:10px">${a.bias.toUpperCase()}</span></td><td>${a.pocStack?'<span style="color:var(--yellow)">⚡ YES</span>':'<span style="color:var(--muted)">—</span>'}</td><td style="color:${a.setup==='SHORT'?'var(--red)':a.setup==='LONG'?'var(--green)':'var(--muted)'}">${a.setup}</td><td style="font-size:11px">${pri}</td></tr>`;}
+function updateSummary(){const aa=INSTRUMENTS.map(i=>analyze(i.id));document.getElementById('strongCount').textContent=aa.filter(a=>a&&a.score>=7).length;document.getElementById('bearishCount').textContent=aa.filter(a=>a&&a.bias==='bearish').length;document.getElementById('stackCount').textContent=aa.filter(a=>a&&a.pocStack).length;}
+function render(){const sorted=[...INSTRUMENTS].sort((a,b)=>(analyze(b.id)?.score||0)-(analyze(a.id)?.score||0));document.getElementById('scannerGrid').innerHTML=sorted.map(i=>renderCard(i)).join('');document.getElementById('rankBody').innerHTML=sorted.map((i,idx)=>renderRankRow(i,idx+1)).join('');updateSummary();}
+function updateLevel(id,f,v){state[id][f]=parseFloat(v);save();csLev[id]&&(csLev[id][f]=parseFloat(v),localStorage.setItem('cs2_lev',JSON.stringify(csLev)));}
+function refreshCard(id){save();render();}
+function runScan(){save();render();if(apiKey)fetchAllPricesREST();const btn=document.querySelector('.scan-btn');btn.textContent='✓ COMPLETE';btn.style.background='var(--green)';setTimeout(()=>{btn.textContent='▶ Run Scan';btn.style.background='var(--accent)';},1500);}
+function save(){localStorage.setItem('vpScanner_v3',JSON.stringify(state));}
+function setSession(s){session=s;document.querySelectorAll('.session-badge').forEach(b=>b.classList.remove('active'));document.getElementById(s+'Btn').classList.add('active');const lbs={london:'London 10:30–12:00 RSA',ny:'New York 15:30–19:00 RSA',overlap:'Overlap 15:30–17:00 RSA'};document.getElementById('sessionLabel').textContent=lbs[s];}
+function updateClock(){const n=new Date();document.getElementById('currentDate').textContent=n.toLocaleDateString('en-ZA',{weekday:'short',year:'numeric',month:'short',day:'numeric'});document.getElementById('currentTime').textContent=n.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' RSA';}
+
+// ════════════════════════════════════════════════════════════════
+// CONSOLIDATION SCANNER
+// ════════════════════════════════════════════════════════════════
+const CS_INSTS=[{id:'GER40'},{id:'US30'},{id:'NAS100'},{id:'GBPUSD'},{id:'EURUSD'}];
+const CS_DEF={
+  GER40: {poc:25255,mow:24971,vah:25350,val:24650,mp:24705,tol:0.15},
+  US30:  {poc:48869,mow:48523,vah:49450,val:48407,mp:47880,tol:0.15},
+  NAS100:{poc:24958,mow:24683,vah:25111,val:24400,mp:24458,tol:0.15},
+  GBPUSD:{poc:1.3493,mow:1.3413,vah:1.3550,val:1.3200,mp:1.3286,tol:0.2},
+  EURUSD:{poc:1.1804,mow:1.1771,vah:1.1900,val:1.1600,mp:1.1602,tol:0.2},
+};
+let csLev=JSON.parse(localStorage.getItem('cs2_lev')||'null')||Object.fromEntries(CS_INSTS.map(i=>[i.id,{...CS_DEF[i.id]}]));
+let candles5={},candles15={};
+let csActiveConsol={};
+let csAlerts=[];
+let csRunning=false;
+let scan5count=0,scan15count=0;
+let csTF='5M';
+let csActiveInsts=new Set(['ALL','GER40','US30','NAS100','GBPUSD','EURUSD']);
+let csCdInterval=null;
+let csAudioCtx=null;
+const MIN_CONS=3,RANGE_THR=0.003;
+
+function csInitAudio(){if(!csAudioCtx)csAudioCtx=new(window.AudioContext||window.webkitAudioContext)();}
+function playConsAlert(){try{csInitAudio();[220,220,330].forEach((f,i)=>{const o=csAudioCtx.createOscillator(),g=csAudioCtx.createGain();o.connect(g);g.connect(csAudioCtx.destination);o.frequency.value=f;o.type='sine';g.gain.setValueAtTime(0,csAudioCtx.currentTime+i*.2);g.gain.linearRampToValueAtTime(.25,csAudioCtx.currentTime+i*.2+.05);g.gain.linearRampToValueAtTime(0,csAudioCtx.currentTime+i*.2+.18);o.start(csAudioCtx.currentTime+i*.2);o.stop(csAudioCtx.currentTime+i*.2+.22);});}catch(e){}}
+function playStackAlert(){try{csInitAudio();[330,440,330,440].forEach((f,i)=>{const o=csAudioCtx.createOscillator(),g=csAudioCtx.createGain();o.connect(g);g.connect(csAudioCtx.destination);o.frequency.value=f;o.type='triangle';g.gain.setValueAtTime(0,csAudioCtx.currentTime+i*.15);g.gain.linearRampToValueAtTime(.2,csAudioCtx.currentTime+i*.15+.04);g.gain.linearRampToValueAtTime(0,csAudioCtx.currentTime+i*.15+.13);o.start(csAudioCtx.currentTime+i*.15);o.stop(csAudioCtx.currentTime+i*.15+.16);});}catch(e){}}
+function csFlash(){const el=document.getElementById('sflash');el.className='sflash pu active';setTimeout(()=>el.className='sflash',800);}
+function simCandle(id,tf){const l=csLev[id];const base=parseFloat(l.mp)||1;const vol=base>1000?base*.002:base*.003;const hist=tf==='5M'?candles5:candles15;if(!hist[id]||hist[id].length===0){const s={o:base,h:base+vol,l:base-vol,c:base+vol*.3};hist[id]=[s];return s;}const prev=hist[id][hist[id].length-1];const isCons=hist[id].length>=2&&Math.random()<.25;let o,h,l2,c;if(isCons){const m=(prev.h+prev.l)/2;const t=vol*.2;o=m+(Math.random()-.5)*t;c=m+(Math.random()-.5)*t;h=Math.max(o,c)+t*.3;l2=Math.min(o,c)-t*.3;}else{o=prev.c+(Math.random()-.5)*vol*.3;const mv=(Math.random()-.48)*vol*1.5;c=o+mv;h=Math.max(o,c)+Math.abs(mv)*Math.random()*.5;l2=Math.min(o,c)-Math.abs(mv)*Math.random()*.5;}const ca={o,h,l:l2,c};hist[id].push(ca);if(hist[id].length>20)hist[id].shift();return ca;}
+function detectCons(id,tf){const hist=tf==='5M'?candles5:candles15;const cds=hist[id];if(!cds||cds.length<MIN_CONS)return null;const l=csLev[id];const vah=parseFloat(l.vah),val=parseFloat(l.val),poc=parseFloat(l.poc),tol=parseFloat(l.tol)||.15;const win=cds.slice(-8);for(let s=win.length-MIN_CONS;s>=0;s--){const grp=win.slice(s,s+MIN_CONS);const gH=Math.max(...grp.map(c=>c.h)),gL=Math.min(...grp.map(c=>c.l)),mid=(gH+gL)/2,rPct=(gH-gL)/mid;const isComp=rPct<=RANGE_THR;const inVA=vah&&val?(mid<=vah&&mid>=val):false;if(isComp||inVA){let cLen=MIN_CONS;for(let i=s+MIN_CONS;i<win.length;i++){const eH=Math.max(...win.slice(s,i+1).map(c=>c.h)),eL=Math.min(...win.slice(s,i+1).map(c=>c.l)),eM=(eH+eL)/2,eR=(eH-eL)/eM;if(eR<=RANGE_THR*1.5)cLen++;else break;}const dPOC=poc?Math.abs(mid-poc)/mid*100:null,dVAH=vah?Math.abs(mid-vah)/mid*100:null,dVAL=val?Math.abs(mid-val)/mid*100:null,dMOW=l.mow?Math.abs(mid-l.mow)/mid*100:null;let nearLev=null;if(dPOC!==null&&dPOC<tol)nearLev={name:'Fixed POC',val:poc};else if(dVAH!==null&&dVAH<tol)nearLev={name:'VAH',val:vah};else if(dVAL!==null&&dVAL<tol)nearLev={name:'VAL',val:val};else if(dMOW!==null&&dMOW<tol)nearLev={name:'MO/WO',val:l.mow};return{id,tf,cLen,rPct:(rPct*100).toFixed(3),gH,gL,mid,isComp,inVA,nearLev,candles:win.slice(s),priority:(nearLev||(isComp&&inVA))?'high':'std'};}}return null;}
+function buildZoneViz(r){const l=csLev[r.id];const vah=parseFloat(l.vah)||r.mid*1.005;const val=parseFloat(l.val)||r.mid*.995;const poc=parseFloat(l.poc)||r.mid;const tot=vah-val;if(tot<=0)return'';const toY=p=>Math.max(2,Math.min(96,((vah-p)/tot)*100));const vahY=toY(vah),valY=toY(val),pocY=toY(poc),pY=toY(r.mid),cT=toY(r.gH),cB=toY(r.gL),cH=Math.max(4,cB-cT);const inVA=r.inVA;return`<div class="zone-viz"><div class="zone-lbl">Consolidation Zone Visualiser</div><div class="zone-chart"><div class="zc-vah" style="top:${vahY}%"></div><div class="zc-lbl-vah" style="top:${vahY}%">VAH ${fmt(vah)}</div><div class="zc-val" style="top:${valY}%"></div><div class="zc-lbl-val" style="top:${valY}%">VAL ${fmt(val)}</div><div class="zc-poc" style="top:${pocY}%"></div><div class="zc-lbl-poc2" style="top:${pocY}%">POC</div><div class="zc-cons" style="top:${cT}%;height:${cH}%;background:${inVA?'rgba(191,95,255,.6)':'rgba(255,204,0,.5)'}"></div><div class="zc-price" style="top:${Math.max(2,pY-6)}%;height:12%;background:${inVA?'var(--purple)':'var(--yellow)'}"></div><div class="zc-price-lbl" style="top:${pY}%;color:${inVA?'var(--purple)':'var(--yellow)'}">▶ ${fmt(r.mid)}</div></div></div>`;}
+function buildStrip(cds,cs){if(!cds||!cds.length)return'';const aH=Math.max(...cds.map(c=>c.h)),aL=Math.min(...cds.map(c=>c.l)),range=aH-aL||.001;const toH=(p,h)=>Math.max(2,Math.round(((h-p)/range)*40));const stks=cds.map((c,i)=>{const bull=c.c>=c.o;const bH=Math.max(2,Math.round((Math.abs(c.c-c.o)/range)*40));const wt=toH(Math.max(c.o,c.c),c.h),wb=toH(c.l,Math.min(c.o,c.c));const isC=i>=cs;return`<div class="mini-c" style="color:${bull?'var(--green)':'var(--red)'}"><div class="mc-wick" style="height:${wt}px"></div><div class="mc-body ${bull?'bull':'bear'} ${isC?'cons-hi':''}" style="height:${bH}px"></div><div class="mc-wick" style="height:${wb}px"></div></div>`;}).join('');return`<div class="candle-strip"><span class="cs-lbl2">Recent</span>${stks}</div>`;}
+function buildCSCard(r){const now=new Date();const ts=now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});const isHi=r.priority==='high';const inVA=r.inVA;let typeLbl,typeCol;if(inVA&&r.isComp){typeLbl='DUAL CONSOLIDATION';typeCol='var(--purple)';}else if(inVA){typeLbl='VALUE AREA CONS';typeCol='var(--accent)';}else{typeLbl='RANGE COMPRESSION';typeCol='var(--yellow)';}const tfB=r.tf==='BOTH'?`<span class="badge b-tf5">5M</span><span class="badge b-tf15">15M</span>`:r.tf==='5M'?`<span class="badge b-tf5">5M</span>`:`<span class="badge b-tf15">15M</span>`;const vaB=inVA?`<span class="badge b-inside">▣ Inside VA</span>`:`<span class="badge b-outside">▪ Outside VA</span>`;const levB=r.nearLev?`<span class="badge b-hi">⚡ At ${r.nearLev.name}</span>`:'';const priB=isHi?`<span class="badge b-hi">HIGH PRIORITY</span>`:`<span class="badge b-std">STANDARD</span>`;let act='';if(inVA&&r.isComp)act=`⚠️ BREAKOUT IMMINENT. Range+VA both compressed. Watch ${fmt(r.gH)} and ${fmt(r.gL)}.`;else if(inVA)act=`Price coiling inside VA. Set alerts at VAH ${fmt(csLev[r.id].vah)} and VAL ${fmt(csLev[r.id].val)}.`;else act=`Range < 0.3% for ${r.cLen} candles. Wait for breakout candle before entering.`;const rPips=r.gH>100?`${(r.gH-r.gL).toFixed(0)}`:`${((r.gH-r.gL)*10000).toFixed(0)}p`;const csStart=Math.max(0,(r.candles?.length||0)-r.cLen);return`<div class="acard cons ${isHi?'hi':''}"><div class="ctop"><div class="cleft"><div style="width:30px;height:30px;border-radius:50%;border:2px solid ${typeCol};background:${typeCol}15;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🔲</div><div><div class="cinst" style="color:${typeCol}">${r.id}</div><div class="ctype" style="color:${typeCol}">${typeLbl}</div><div class="ctime">${ts} · ${r.tf}</div></div></div><div class="cbadges">${tfB}${vaB}${levB}${priB}</div></div>${buildStrip(r.candles,csStart)}${buildZoneViz(r)}<div class="cs-metrics"><div class="met"><div class="met-lbl">Candles</div><div class="met-val" style="color:${typeCol}">${r.cLen}</div></div><div class="met"><div class="met-lbl">Range</div><div class="met-val">${rPips}</div></div><div class="met"><div class="met-lbl">Range%</div><div class="met-val" style="color:${parseFloat(r.rPct)<.2?'var(--red)':'var(--yellow)'}">${r.rPct}%</div></div><div class="met"><div class="met-lbl">Mid</div><div class="met-val">${fmt(r.mid)}</div></div></div><div class="cs-action">${act}</div></div>`;}
+function csFireAlert(r){document.getElementById('csEmptyState')?.remove();const feed=document.getElementById('csFeed');const d=document.createElement('div');d.innerHTML=buildCSCard(r);feed.insertBefore(d.firstElementChild,feed.firstChild);while(feed.children.length>40)feed.removeChild(feed.lastChild);if(r.tf==='BOTH'||r.priority==='high'){playStackAlert();csFlash();}else{playConsAlert();csFlash();}csAlerts.push(r);updateCSStats();}
+function csScan(tf){if(tf==='5M'){scan5count++;document.getElementById('scan5lbl').textContent=`Scans: ${scan5count}`;}else{scan15count++;document.getElementById('scan15lbl').textContent=`Scans: ${scan15count}`;}const s5=csTF==='5M'||csTF==='BOTH',s15=csTF==='15M'||csTF==='BOTH';if(tf==='5M'&&!s5)return;if(tf==='15M'&&!s15)return;CS_INSTS.forEach(inst=>{if(!csActiveInsts.has('ALL')&&!csActiveInsts.has(inst.id))return;simCandle(inst.id,tf);const r=detectCons(inst.id,tf);if(r){const k=`${inst.id}_${tf}`;const last=csActiveConsol[k];const now=Date.now();if(!last||(now-last)>120000){csActiveConsol[k]=now;csFireAlert(r);}}});}
+function startCSCountdown(){if(csCdInterval)clearInterval(csCdInterval);csCdInterval=setInterval(()=>{const now=new Date();const secs=now.getMinutes()*60+now.getSeconds();const s5l=300-(secs%300);const m5=Math.floor(s5l/60),s5=s5l%60;document.getElementById('cd5').textContent=`${String(m5).padStart(2,'0')}:${String(s5).padStart(2,'0')}`;document.getElementById('fill5').style.width=`${(s5l/300)*100}%`;if(csRunning&&s5l<=2)csScan('5M');const s15l=900-(secs%900);const m15=Math.floor(s15l/60),s15=s15l%60;document.getElementById('cd15').textContent=`${String(m15).padStart(2,'0')}:${String(s15).padStart(2,'0')}`;document.getElementById('fill15').style.width=`${(s15l/900)*100}%`;if(csRunning&&s15l<=2)csScan('15M');},1000);}
+function toggleCS(){csInitAudio();csRunning=!csRunning;const btn=document.getElementById('csMasterBtn');const dot=document.getElementById('sdot');if(csRunning){btn.textContent='STOP';btn.className='cs-master stop';dot.className='sdot on';}else{btn.textContent='START';btn.className='cs-master start';dot.className='sdot off';}}
+function setTF(tf){csTF=tf;document.getElementById('tab5').className=`tf-tab${tf==='5M'?' on5':''}`;document.getElementById('tab15').className=`tf-tab${tf==='15M'?' on15':''}`;document.getElementById('tabBOTH').className=`tf-tab${tf==='BOTH'?' onBOTH':''}`;}
+function toggleInst(el,inst){if(inst==='ALL'){if(csActiveInsts.has('ALL')){csActiveInsts.clear();document.querySelectorAll('.ipill').forEach(p=>p.classList.remove('on'));}else{csActiveInsts=new Set(['ALL','GER40','US30','NAS100','GBPUSD','EURUSD']);document.querySelectorAll('.ipill').forEach(p=>p.classList.add('on'));}}else{csActiveInsts.delete('ALL');document.querySelector('[data-inst="ALL"]').classList.remove('on');if(csActiveInsts.has(inst)){csActiveInsts.delete(inst);el.classList.remove('on');}else{csActiveInsts.add(inst);el.classList.add('on');}if(csActiveInsts.size===5){csActiveInsts.add('ALL');document.querySelector('[data-inst="ALL"]').classList.add('on');}}}
+function testCons(id,tf,type){csInitAudio();const l=csLev[id];const base=parseFloat(l.mp)||1;const vah=parseFloat(l.vah)||base*1.005,val=parseFloat(l.val)||base*.995,mid=type==='INSIDE'?(vah+val)/2:base;const tv=base>100?base*.001:base*.0015;const fc=Array.from({length:6},()=>({o:mid+(Math.random()-.5)*tv,h:mid+tv*.6,l:mid-tv*.6,c:mid+(Math.random()-.5)*tv}));const hist=tf==='5M'||tf==='BOTH'?candles5:candles15;hist[id]=fc;if(tf==='BOTH'){candles5[id]=fc;candles15[id]=fc;}const r={id,tf,cLen:5,rPct:'0.18',gH:mid+tv*.6,gL:mid-tv*.6,mid,isComp:true,inVA:type==='INSIDE',nearLev:type==='INSIDE'?{name:'VAL',val:l.val}:null,candles:fc,priority:type==='INSIDE'?'high':'std'};csFireAlert(r);}
+function renderCSLevels(){document.getElementById('csLevInputs').innerHTML=CS_INSTS.map(inst=>{const l=csLev[inst.id];return`<div class="inst-block"><div class="inst-bhdr"><span class="inst-bname">${inst.id}</span></div><div class="lev-row"><div class="lg"><span class="ll" style="color:var(--accent)">Fixed POC</span><input class="li poc2" type="number" step="any" inputmode="decimal" value="${l.poc||''}" onchange="updCSLev('${inst.id}','poc',this.value)"></div><div class="lg"><span class="ll" style="color:var(--red)">MO/WO</span><input class="li mow2" type="number" step="any" inputmode="decimal" value="${l.mow||''}" onchange="updCSLev('${inst.id}','mow',this.value)"></div><div class="lg"><span class="ll" style="color:var(--green)">VAH</span><input class="li vah" type="number" step="any" inputmode="decimal" value="${l.vah||''}" onchange="updCSLev('${inst.id}','vah',this.value)"></div><div class="lg"><span class="ll" style="color:var(--yellow)">VAL</span><input class="li val" type="number" step="any" inputmode="decimal" value="${l.val||''}" onchange="updCSLev('${inst.id}','val',this.value)"></div><div class="lg"><span class="ll" style="color:var(--purple)">Price</span><input class="li mp" type="number" step="any" inputmode="decimal" value="${l.mp||''}" onchange="updCSLev('${inst.id}','mp',this.value)"></div><div class="lg"><span class="ll">Tol %</span><input class="li" type="number" step="0.01" inputmode="decimal" value="${l.tol||.15}" onchange="updCSLev('${inst.id}','tol',this.value)"></div></div></div>`;}).join('');}
+function toggleCSLevels(){const b=document.getElementById('csLevBody'),a=document.getElementById('csLevArr');b.classList.toggle('open');a.classList.toggle('open');}
+function updCSLev(id,f,v){csLev[id][f]=parseFloat(v)||v;localStorage.setItem('cs2_lev',JSON.stringify(csLev));}
+function updateCSStats(){const act=Object.values(csActiveConsol).filter(t=>Date.now()-t<300000).length;document.getElementById('csTot').textContent=csAlerts.length;document.getElementById('csAct').textContent=act;document.getElementById('cs5').textContent=csAlerts.filter(a=>a.tf==='5M').length;document.getElementById('cs15').textContent=csAlerts.filter(a=>a.tf==='15M').length;document.getElementById('csLv').textContent=csAlerts.filter(a=>a.nearLev).length;document.getElementById('csFeedCount').textContent=`${csAlerts.length} alert${csAlerts.length!==1?'s':''}`;}
+function clearCSFeed(){csAlerts=[];csActiveConsol={};document.getElementById('csFeed').innerHTML=`<div class="empty" id="csEmptyState"><div class="empty-icon">🔲</div><div class="empty-txt">Feed cleared<br>Monitoring continues</div></div>`;updateCSStats();}
+</script>
+</body>
+</html>
